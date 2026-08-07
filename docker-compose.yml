@@ -1,0 +1,44 @@
+name: prompt-lib
+
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    mem_limit: 384m
+    environment:
+      POSTGRES_USER: promptlib
+      POSTGRES_PASSWORD: promptlib
+      POSTGRES_DB: promptlib
+    ports:
+      - "6062:5432"
+    volumes:
+      - /Users/narendra.bagul/Code/POC/Tools/shared-data/prompt-lib/postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U promptlib"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  api:
+    build: ./backend
+    restart: unless-stopped
+    mem_limit: 256m
+    environment:
+      DATABASE_URL: postgres://promptlib:promptlib@db:5432/promptlib
+      EXPORT_DIR: /data/exports
+    ports:
+      - "6061:3000"
+    volumes:
+      - /Users/narendra.bagul/Code/POC/Tools/shared-data/prompt-lib/exports:/data/exports
+    depends_on:
+      db:
+        condition: service_healthy
+
+  web:
+    build: ./frontend
+    restart: unless-stopped
+    mem_limit: 128m
+    ports:
+      - "6060:80"
+    depends_on:
+      - api
